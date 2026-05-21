@@ -43,7 +43,6 @@ target_link_libraries(
          klogg_regex
          klogg_filewatch
          Qt6::Core
-         Qt6::Core5Compat
          roaring
          roaring-headers-cpp
          roaring-headers

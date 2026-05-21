@@ -19,10 +19,13 @@
 
 #include "encodingdetector.h"
 
-#include <QTextCodec>
+#include <QStringConverter>
 
 #include "containers.h"
 #include "log.h"
+#include "textencoding.h"
+
+#include <simdutf.h>
 #include <uchardet.h>
 
 namespace {
@@ -65,25 +68,21 @@ class UchardetHolder {
 
 } // namespace
 
-EncodingParameters::EncodingParameters( const QTextCodec* codec )
+EncodingParameters::EncodingParameters( const QByteArray& encodingName )
 {
     static constexpr QChar LineFeed( QChar::LineFeed );
-    static constexpr int Utf8Mib = 106;
-    static constexpr int Utf16LEMib = 1014;
-    static constexpr int UsAsciiMib = 3;
 
-    isUtf8Compatible = codec->mibEnum() == Utf8Mib || codec->mibEnum() == UsAsciiMib;
-    isUtf16LE = codec->mibEnum() == Utf16LEMib;
+    isUtf8Compatible = encodingName == "UTF-8" || encodingName == "US-ASCII";
+    isUtf16LE = encodingName == "UTF-16LE";
 
-    QTextCodec::ConverterState convertState( QTextCodec::IgnoreHeader );
-    const QByteArray encodedLineFeed = codec->fromUnicode( &LineFeed, 1, &convertState );
+    const QByteArray encodedLineFeed = textencoding::encode( encodingName, QStringView( &LineFeed, 1 ) );
 
     lineFeedWidth = static_cast<int>( encodedLineFeed.size() );
     lineFeedIndex
         = encodedLineFeed[ 0 ] == '\n' ? 0 : ( static_cast<int>( encodedLineFeed.size() ) - 1 );
 }
 
-QTextCodec* EncodingDetector::detectEncoding( const klogg::vector<char>& block ) const
+QByteArray EncodingDetector::detectEncoding( const klogg::vector<char>& block ) const
 {
     UniqueLock lock( mutex_ );
 
@@ -94,13 +93,13 @@ QTextCodec* EncodingDetector::detectEncoding( const klogg::vector<char>& block )
         ud.data_end();
     }
 
-    QTextCodec* uchardetCodec = nullptr;
+    QByteArray uchardetEncoding;
     if ( rc == 0 ) {
         auto uchardetGuess = ud.get_charset();
         LOG_DEBUG << "Uchardet encoding guess " << uchardetGuess;
-        uchardetCodec = QTextCodec::codecForName( uchardetGuess );
-        if ( uchardetCodec ) {
-            LOG_DEBUG << "Uchardet codec selected " << uchardetCodec->name().constData();
+        uchardetEncoding = textencoding::canonicalName( QLatin1StringView( uchardetGuess ) );
+        if ( !uchardetEncoding.isEmpty() ) {
+            LOG_DEBUG << "Uchardet codec selected " << uchardetEncoding.constData();
         }
         else {
             LOG_DEBUG << "Uchardet codec not found for guess " << uchardetGuess;
@@ -108,26 +107,37 @@ QTextCodec* EncodingDetector::detectEncoding( const klogg::vector<char>& block )
     }
 
     QByteArray blockArray = QByteArray::fromRawData( block.data(), klogg::isize( block ) );
+    QByteArray encodingGuess;
+    if ( const auto detectedUnicodeEncoding = QStringConverter::encodingForData( blockArray ) ) {
+        encodingGuess = QByteArray( QStringConverter::nameForEncoding( *detectedUnicodeEncoding ) );
+    }
+    else if ( simdutf::validate_utf8( block.data(), block.size() ) ) {
+        encodingGuess = QByteArrayLiteral( "UTF-8" );
+    }
+    else {
+        encodingGuess = uchardetEncoding;
+    }
 
-    auto encodingGuess = uchardetCodec ? QTextCodec::codecForUtfText( blockArray, uchardetCodec )
-                                       : QTextCodec::codecForUtfText( blockArray );
+    if ( encodingGuess.isEmpty() ) {
+        encodingGuess = textencoding::systemEncodingName();
+    }
 
-    LOG_DEBUG << "Final encoding guess " << encodingGuess->name().constData();
+    LOG_DEBUG << "Final encoding guess " << encodingGuess.constData();
 
     return encodingGuess;
 }
 
-TextCodecHolder::TextCodecHolder( QTextCodec* codec )
-    : codec_{ codec }
-    , encodingParams_{ codec }
+TextCodecHolder::TextCodecHolder( const QByteArray& encodingName )
+    : encodingName_{ encodingName }
+    , encodingParams_{ encodingName }
 {
-    assert( codec != nullptr );
+    assert( !encodingName.isEmpty() );
 }
 
-QTextCodec* TextCodecHolder::codec() const
+QByteArray TextCodecHolder::encodingName() const
 {
     SharedLock guard( mutex_ );
-    return codec_;
+    return encodingName_;
 }
 
 EncodingParameters TextCodecHolder::encodingParameters() const
@@ -136,21 +146,15 @@ EncodingParameters TextCodecHolder::encodingParameters() const
     return encodingParams_;
 }
 
-int TextCodecHolder::mibEnum() const
-{
-    SharedLock guard( mutex_ );
-    return codec_->mibEnum();
-}
-
-void TextCodecHolder::setCodec( QTextCodec* codec )
+void TextCodecHolder::setEncodingName( const QByteArray& encodingName )
 {
     UniqueLock guard( mutex_ );
-    codec_ = codec;
-    encodingParams_ = EncodingParameters{ codec_ };
+    encodingName_ = encodingName;
+    encodingParams_ = EncodingParameters{ encodingName_ };
 }
 
 TextDecoder TextCodecHolder::makeDecoder() const
 {
     SharedLock guard( mutex_ );
-    return { std::make_unique<QTextDecoder>( codec_ ), encodingParams_ };
+    return { textencoding::makeDecoder( encodingName_ ), encodingParams_ };
 }

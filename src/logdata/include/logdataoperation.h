@@ -88,8 +88,8 @@ class AttachOperation : public LogDataOperation {
 // Reindexing the current file
 class FullReindexOperation : public LogDataOperation {
   public:
-    explicit FullReindexOperation( QTextCodec* forcedEncoding = nullptr )
-        : forcedEncoding_( forcedEncoding )
+    explicit FullReindexOperation( QByteArray forcedEncoding = {} )
+        : forcedEncoding_( std::move( forcedEncoding ) )
     {
     }
 
@@ -97,7 +97,7 @@ class FullReindexOperation : public LogDataOperation {
     void doStart( LogDataWorker& workerThread ) const override;
 
   private:
-    QTextCodec* forcedEncoding_;
+    QByteArray forcedEncoding_;
 };
 
 // Indexing part of the current file (from fileSize)

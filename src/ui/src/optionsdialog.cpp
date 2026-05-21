@@ -156,21 +156,18 @@ void OptionsDialog::setupStyles()
 void OptionsDialog::setupEncodings()
 {
     const auto availableEncodings = EncodingMenu::supportedEncodings();
-    encodingComboBox->addItem( "Auto", -1 );
+    encodingComboBox->addItem( "Auto", QByteArray{} );
 
-    std::map<QString, int> allMibs;
+    std::set<QString> allEncodings;
 
     for ( const auto& group : availableEncodings ) {
-        for ( const auto& mib : group.second ) {
-            auto codec = QTextCodec::codecForMib( mib );
-            if ( codec ) {
-                allMibs.emplace( codec->name(), mib );
-            }
+        for ( const auto& encodingName : group.second ) {
+            allEncodings.emplace( QString::fromLatin1( encodingName ) );
         }
     }
 
-    for ( const auto& codec : allMibs ) {
-        encodingComboBox->addItem( codec.first, codec.second );
+    for ( const auto& encodingName : allEncodings ) {
+        encodingComboBox->addItem( encodingName, encodingName.toLatin1() );
     }
 }
 
@@ -374,7 +371,7 @@ void OptionsDialog::updateDialogFromConfig()
     // downloads
     verifySslCheckBox->setChecked( config.verifySslPeers() );
 
-    const auto encodingIndex = encodingComboBox->findData( config.defaultEncodingMib() );
+    const auto encodingIndex = encodingComboBox->findData( config.defaultEncodingName() );
     encodingComboBox->setCurrentIndex( encodingIndex < 0 ? 0 : encodingIndex );
 
     buildShortcutsTable( false );
@@ -550,7 +547,7 @@ void OptionsDialog::updateConfigFromDialog()
     config.setStyle( styleComboBox->currentText() );
     config.setHideAnsiColorSequences( hideAnsiColorsCheckBox->isChecked() );
 
-    config.setDefaultEncodingMib( encodingComboBox->currentData().toInt() );
+    config.setDefaultEncodingName( encodingComboBox->currentData().toByteArray() );
 
     auto shortcuts = config.shortcuts();
     for ( auto shortcutRow = 0; shortcutRow < shortcutsTable->rowCount(); ++shortcutRow ) {

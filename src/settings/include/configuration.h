@@ -516,13 +516,13 @@ class Configuration final : public Persistable<Configuration> {
         hideAnsiColorSequences_ = hide;
     }
 
-    int defaultEncodingMib() const
+    QByteArray defaultEncodingName() const
     {
-        return defaultEncodingMib_;
+        return defaultEncodingName_;
     }
-    void setDefaultEncodingMib( int mib )
+    void setDefaultEncodingName( QByteArray encodingName )
     {
-        defaultEncodingMib_ = mib;
+        defaultEncodingName_ = std::move( encodingName );
     }
 
     std::map<QString, QString> darkPalette() const {
@@ -610,7 +610,7 @@ class Configuration final : public Persistable<Configuration> {
 
     bool hideAnsiColorSequences_ = false;
 
-    int defaultEncodingMib_ = -1;
+    QByteArray defaultEncodingName_;
 
     bool qfIgnoreCase_ = false;
 

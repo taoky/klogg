@@ -45,9 +45,7 @@
 #include <QFile>
 #include <QObject>
 #include <QString>
-#include <QTextCodec>
 #include <qregularexpression.h>
-#include <qtextcodec.h>
 #include <string_view>
 #include <vector>
 
@@ -97,10 +95,10 @@ class LogData : public AbstractLogData {
     // Null if the file is not on disk.
     QDateTime getLastModifiedDate() const;
     // Throw away all the file data and reload/reindex.
-    void reload( QTextCodec* forcedEncoding = nullptr );
+    void reload( QByteArray forcedEncoding = {} );
 
     // Get the auto-detected encoding for the indexed text.
-    QTextCodec* getDetectedEncoding() const;
+    QByteArray getDetectedEncodingName() const;
 
     void setPrefilter(const QString& prefilterPattern);
 
@@ -115,8 +113,8 @@ class LogData : public AbstractLogData {
         QRegularExpression prefilterPattern;
 
       public:
-        klogg::vector<QString> decodeLines() const;
-        klogg::vector<std::string_view> buildUtf8View() const;
+        klogg::vector<QString> decodeLines();
+        klogg::vector<std::string_view> buildUtf8View();
 
       private:
         mutable klogg::vector<char> utf8Data_;
@@ -152,8 +150,8 @@ class LogData : public AbstractLogData {
     LinesCount doGetNbLine() const override;
     LineLength doGetMaxLength() const override;
     LineLength doGetLineLength( LineNumber line ) const override;
-    void doSetDisplayEncoding( const char* encoding ) override;
-    QTextCodec* doGetDisplayEncoding() const override;
+    void doSetDisplayEncoding( const QByteArray& encoding ) override;
+    QByteArray doGetDisplayEncodingName() const override;
     void doAttachReader() const override;
     void doDetachReader() const override;
 

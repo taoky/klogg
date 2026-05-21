@@ -124,7 +124,7 @@ TEST_CASE( "Logdata decoding lines", "[logdata]" )
     REQUIRE( finishedSpy->count() == 1 );
     REQUIRE( logData.getNbLine() == 400_lcount );
 
-    const auto rawLines = logData.getLinesRaw( 200_lnum, 200_lcount );
+    auto rawLines = logData.getLinesRaw( 200_lnum, 200_lcount );
     REQUIRE( rawLines.startLine == 200_lnum );
     REQUIRE( rawLines.endOfLines.size() == 200 );
 

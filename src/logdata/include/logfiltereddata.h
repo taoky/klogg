@@ -160,8 +160,8 @@ class LogFilteredData : public AbstractLogData {
     LineLength doGetMaxLength() const override;
     LineLength doGetLineLength( LineNumber line ) const override;
 
-    void doSetDisplayEncoding( const char* encoding ) override;
-    QTextCodec* doGetDisplayEncoding() const override;
+    void doSetDisplayEncoding( const QByteArray& encoding ) override;
+    QByteArray doGetDisplayEncodingName() const override;
 
     void doAttachReader() const override;
     void doDetachReader() const override;

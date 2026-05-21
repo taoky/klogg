@@ -49,6 +49,7 @@
 #include "log.h"
 #include "shortcuts.h"
 #include "styles.h"
+#include "textencoding.h"
 
 namespace {
 std::once_flag fontInitFlag;
@@ -302,9 +303,17 @@ void Configuration::retrieveFromStorage( QSettings& settings )
         = settings.value( "defaultView.searchLogicalCombining", DefaultConfiguration.searchLogicalCombining_ )
               .toBool();
 
-    defaultEncodingMib_
-        = settings.value( "defaultView.encodingMib", DefaultConfiguration.defaultEncodingMib_ )
-              .toInt();
+    defaultEncodingName_
+        = settings.value( "defaultView.encodingName", DefaultConfiguration.defaultEncodingName_ )
+              .toByteArray();
+
+    if ( defaultEncodingName_.isEmpty() ) {
+        const auto legacyEncodingMib
+            = settings.value( "defaultView.encodingMib", -1 ).toInt();
+        if ( legacyEncodingMib >= 0 ) {
+            defaultEncodingName_ = textencoding::canonicalNameForMib( legacyEncodingMib );
+        }
+    }
 
     if ( settings.contains( "defaultView.splitterSizes" ) ) {
         splitterSizes_.clear();
@@ -421,7 +430,8 @@ void Configuration::saveToStorage( QSettings& settings ) const
     settings.setValue( "defaultView.searchAutoRefresh", searchAutoRefresh_ );
     settings.setValue( "defaultView.searchIgnoreCase", searchIgnoreCase_ );
     settings.setValue( "defaultView.searchLogicalCombining", searchLogicalCombining_ );
-    settings.setValue( "defaultView.encodingMib", defaultEncodingMib_ );
+    settings.setValue( "defaultView.encodingName", defaultEncodingName_ );
+    settings.remove( "defaultView.encodingMib" );
 
     QList<QVariant> splitterSizes;
     std::transform( splitterSizes_.cbegin(), splitterSizes_.cend(),

@@ -24,14 +24,12 @@
 #include "synchronization.h"
 
 #include <QByteArray>
+#include <QStringConverter>
 #include <memory>
-
-class QTextCodec;
-class QTextDecoder;
 
 struct EncodingParameters {
     EncodingParameters() = default;
-    explicit EncodingParameters( const QTextCodec* codec );
+    explicit EncodingParameters( const QByteArray& encodingName );
 
     bool isUtf8Compatible{ false };
     bool isUtf16LE{ false };
@@ -73,7 +71,7 @@ class EncodingDetector {
     EncodingDetector( const EncodingDetector&& ) = delete;
     EncodingDetector& operator=( const EncodingDetector&& ) = delete;
 
-    QTextCodec* detectEncoding( const klogg::vector<char>& block ) const;
+    QByteArray detectEncoding( const klogg::vector<char>& block ) const;
 
   private:
     EncodingDetector() = default;
@@ -83,24 +81,23 @@ class EncodingDetector {
 };
 
 struct TextDecoder {
-    std::unique_ptr<QTextDecoder> decoder;
+    QStringDecoder decoder;
     EncodingParameters encodingParams;
 };
 
 class TextCodecHolder {
   public:
-    explicit TextCodecHolder( QTextCodec* codec );
+    explicit TextCodecHolder( const QByteArray& encodingName );
 
-    void setCodec( QTextCodec* codec );
+    void setEncodingName( const QByteArray& encodingName );
 
-    QTextCodec* codec() const;
+    QByteArray encodingName() const;
     EncodingParameters encodingParameters() const;
-    int mibEnum() const;
 
     TextDecoder makeDecoder() const;
 
   private:
-    QTextCodec* codec_;
+    QByteArray encodingName_;
     EncodingParameters encodingParams_;
     mutable SharedMutex mutex_;
 };

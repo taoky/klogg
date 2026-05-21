@@ -63,6 +63,7 @@
 #include "progress.h"
 #include "readablesize.h"
 #include "runnable_lambda.h"
+#include "textencoding.h"
 
 #include "logdataworker.h"
 
@@ -104,28 +105,29 @@ klogg::vector<OffsetInFile> IndexingData::getEndOfLineOffsets( LineNumber line,
         linePosition_ );
 }
 
-QTextCodec* IndexingData::getEncodingGuess() const
+QByteArray IndexingData::getEncodingGuess() const
 {
     return encodingGuess_;
 }
 
-void IndexingData::setEncodingGuess( QTextCodec* codec )
+void IndexingData::setEncodingGuess( const QByteArray& encodingName )
 {
-    encodingGuess_ = codec;
+    encodingGuess_ = encodingName;
 }
 
-void IndexingData::forceEncoding( QTextCodec* codec )
+void IndexingData::forceEncoding( const QByteArray& encodingName )
 {
-    encodingForced_ = codec;
+    encodingForced_ = encodingName;
 }
 
-QTextCodec* IndexingData::getForcedEncoding() const
+QByteArray IndexingData::getForcedEncoding() const
 {
     return encodingForced_;
 }
 
 void IndexingData::addAll( const klogg::vector<char>& block, LineLength length,
-                           const FastLinePositionArray& newLinePosition, QTextCodec* encoding )
+                           const FastLinePositionArray& newLinePosition,
+                           const QByteArray& encodingName )
 
 {
     maxLength_ = std::max( maxLength_, length );
@@ -142,7 +144,7 @@ void IndexingData::addAll( const klogg::vector<char>& block, LineLength length,
         }
     }
 
-    encodingGuess_ = encoding;
+    encodingGuess_ = encodingName;
 }
 
 int IndexingData::getProgress() const
@@ -206,15 +208,14 @@ void LogDataWorker::attachFile( const QString& fileName )
     fileName_ = fileName;
 }
 
-void LogDataWorker::indexAll( QTextCodec* forcedEncoding )
+void LogDataWorker::indexAll( QByteArray forcedEncoding )
 {
     ScopedLock locker( operationsMutex_ );
     operationsPool_.waitForDone();
     interruptRequest_.clear();
 
     LOG_INFO << "FullIndex requested, forced encoding: "
-             << ( forcedEncoding != nullptr ? forcedEncoding->name().toStdString()
-                                            : std::string{ "none" } );
+             << ( !forcedEncoding.isEmpty() ? forcedEncoding.toStdString() : std::string{ "none" } );
     QSemaphore operationStarted;
     operationsPool_.start(
         createRunnable( [ this, &operationStarted, forcedEncoding, fileName = fileName_ ] {
@@ -484,26 +485,26 @@ void IndexOperation::guessEncoding( const klogg::vector<char>& block,
                                     IndexingData::MutateAccessor& scopedAccessor,
                                     IndexingState& state ) const
 {
-    if ( !state.encodingGuess ) {
+    if ( state.encodingGuess.isEmpty() ) {
         state.encodingGuess = EncodingDetector::getInstance().detectEncoding( block );
-        LOG_INFO << "Encoding guess " << state.encodingGuess->name().toStdString();
+        LOG_INFO << "Encoding guess " << state.encodingGuess.toStdString();
     }
 
-    if ( !state.fileTextCodec ) {
+    if ( state.fileTextCodec.isEmpty() ) {
         state.fileTextCodec = scopedAccessor.getForcedEncoding();
 
-        if ( !state.fileTextCodec ) {
+        if ( state.fileTextCodec.isEmpty() ) {
             state.fileTextCodec = scopedAccessor.getEncodingGuess();
         }
 
-        if ( !state.fileTextCodec ) {
+        if ( state.fileTextCodec.isEmpty() ) {
             state.fileTextCodec = state.encodingGuess;
         }
     }
 
     state.encodingParams = EncodingParameters( state.fileTextCodec );
 
-    LOG_DEBUG << "Encoding " << state.fileTextCodec->name().toStdString() << ", Char width "
+    LOG_DEBUG << "Encoding " << state.fileTextCodec.toStdString() << ", Char width "
               << state.encodingParams.lineFeedWidth;
 }
 
@@ -619,7 +620,7 @@ void IndexOperation::doIndex( OffsetInFile initialPosition )
         IndexingData::MutateAccessor scopedAccessor{ indexing_data_.get() };
 
         scopedAccessor.clear();
-        scopedAccessor.setEncodingGuess( QTextCodec::codecForLocale() );
+        scopedAccessor.setEncodingGuess( textencoding::systemEncodingName() );
 
         scopedAccessor.setProgress( 100 );
         Q_EMIT indexingProgressed( 100 );
@@ -636,13 +637,13 @@ void IndexOperation::doIndex( OffsetInFile initialPosition )
         IndexingData::ConstAccessor scopedAccessor{ indexing_data_.get() };
 
         state.fileTextCodec = scopedAccessor.getForcedEncoding();
-        if ( !state.fileTextCodec ) {
+        if ( state.fileTextCodec.isEmpty() ) {
             state.fileTextCodec = scopedAccessor.getEncodingGuess();
         }
 
         state.encodingGuess = scopedAccessor.getEncodingGuess();
         LOG_INFO << "Initial encoding "
-                 << ( state.fileTextCodec != nullptr ? state.fileTextCodec->name().toStdString()
+                 << ( !state.fileTextCodec.isEmpty() ? state.fileTextCodec.toStdString()
                                                      : std::string{ "auto" } );
     }
 
@@ -741,8 +742,8 @@ void IndexOperation::doIndex( OffsetInFile initialPosition )
         scopedAccessor.clear();
     }
 
-    if ( !scopedAccessor.getEncodingGuess() ) {
-        scopedAccessor.setEncodingGuess( QTextCodec::codecForLocale() );
+    if ( scopedAccessor.getEncodingGuess().isEmpty() ) {
+        scopedAccessor.setEncodingGuess( textencoding::systemEncodingName() );
     }
 }
 

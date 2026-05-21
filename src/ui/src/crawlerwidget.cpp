@@ -76,6 +76,7 @@
 #include "quickfindpattern.h"
 #include "savedsearches.h"
 #include "shortcuts.h"
+#include "textencoding.h"
 
 static constexpr char AnsiColorSequenceRegex[] = "\\x1B\\[([0-9]{1,4}((;|:)[0-9]{1,3})*)?[mK]";
 
@@ -194,9 +195,9 @@ void CrawlerWidget::selectAll()
     activeView()->selectAll();
 }
 
-std::optional<int> CrawlerWidget::encodingMib() const
+QByteArray CrawlerWidget::encodingName() const
 {
-    return encodingMib_;
+    return encodingName_;
 }
 
 bool CrawlerWidget::isFollowEnabled() const
@@ -279,9 +280,9 @@ void CrawlerWidget::reload()
     firstLoadDone_ = false;
 }
 
-void CrawlerWidget::setEncoding( std::optional<int> mib )
+void CrawlerWidget::setEncoding( QByteArray encodingName )
 {
-    encodingMib_ = std::move( mib );
+    encodingName_ = std::move( encodingName );
     updateEncoding();
 
     update();
@@ -1293,10 +1294,7 @@ void CrawlerWidget::setup()
 
     connectAllFilteredViewSlots( filteredView_ );
 
-    const auto defaultEncodingMib = config.defaultEncodingMib();
-    if ( defaultEncodingMib >= 0 ) {
-        encodingMib_ = defaultEncodingMib;
-    }
+    encodingName_ = config.defaultEncodingName();
     updatePredefinedFiltersWidget();
 }
 
@@ -1698,25 +1696,24 @@ void CrawlerWidget::changeDataStatus( DataStatus status )
 // Determine the right encoding and set the views.
 void CrawlerWidget::updateEncoding()
 {
-    const QTextCodec* textCodec = [ this ]() {
-        QTextCodec* codec = nullptr;
-        if ( !encodingMib_ ) {
-            codec = logData_->getDetectedEncoding();
+    const auto selectedEncodingName = [ this ]() {
+        if ( encodingName_.isEmpty() ) {
+            const auto detectedEncodingName = logData_->getDetectedEncodingName();
+            return detectedEncodingName.isEmpty() ? textencoding::systemEncodingName()
+                                                  : detectedEncodingName;
         }
-        else {
-            codec = QTextCodec::codecForMib( *encodingMib_ );
-        }
-        return codec ? codec : QTextCodec::codecForLocale();
+        return encodingName_;
     }();
 
-    QString encodingPrefix = encodingMib_ ? tr( "Displayed as %1" ) : tr( "Detected as %1" );
-    encodingText_ = encodingPrefix.arg( textCodec->name().constData() );
+    const QString encodingPrefix
+        = !encodingName_.isEmpty() ? tr( "Displayed as %1" ) : tr( "Detected as %1" );
+    encodingText_ = encodingPrefix.arg( QString::fromLatin1( selectedEncodingName ) );
 
     logData_->interruptLoading();
 
-    logData_->setDisplayEncoding( textCodec->name().constData() );
+    logData_->setDisplayEncoding( selectedEncodingName );
     logMainView_->forceRefresh();
-    logFilteredData_->setDisplayEncoding( textCodec->name().constData() );
+    logFilteredData_->setDisplayEncoding( selectedEncodingName );
     filteredView_->forceRefresh();
 }
 

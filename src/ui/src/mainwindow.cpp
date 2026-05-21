@@ -1276,15 +1276,12 @@ void MainWindow::replaceDataInScratchpad( QString newData )
 
 void MainWindow::encodingChanged( QAction* action )
 {
-    const auto mibData = action->data();
-    std::optional<int> mib;
-    if ( mibData.isValid() ) {
-        mib = mibData.toInt();
-    }
+    const auto encodingData = action->data();
+    auto encodingName = encodingData.toByteArray();
 
-    LOG_DEBUG << "encodingChanged, encoding " << mib.value_or( 0 );
+    LOG_DEBUG << "encodingChanged, encoding " << encodingName.toStdString();
     if ( auto crawler = currentCrawlerWidget() ) {
-        crawler->setEncoding( mib );
+        crawler->setEncoding( encodingName );
         updateInfoLine();
     }
 }
@@ -1889,14 +1886,14 @@ void MainWindow::clearRecentFileActions()
 // (used when the tab is changed)
 void MainWindow::updateMenuBarFromDocument( const CrawlerWidget* crawler )
 {
-    const auto encodingMib = crawler->encodingMib();
+    const auto encodingName = crawler->encodingName();
 
     auto encodingActions = encodingGroup->actions();
     auto encodingItem = std::find_if( encodingActions.begin(), encodingActions.end(),
-                                      [ &encodingMib ]( const auto& action ) {
-                                          return ( !encodingMib && !action->data().isValid() )
-                                                 || ( encodingMib && action->data().isValid()
-                                                      && *encodingMib == action->data().toInt() );
+                                      [ &encodingName ]( const auto& action ) {
+                                          return ( encodingName.isEmpty() && !action->data().isValid() )
+                                                 || ( !encodingName.isEmpty() && action->data().isValid()
+                                                      && encodingName == action->data().toByteArray() );
                                       } );
 
     if ( encodingItem != encodingActions.end() ) {

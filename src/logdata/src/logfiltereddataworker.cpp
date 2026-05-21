@@ -96,8 +96,8 @@ struct SearchBlockData {
     PartialSearchResults searchResults;
 };
 
-PartialSearchResults filterLines( const PatternMatcher& matcher, const LogData::RawLines& rawLines,
-                                  LineNumber chunkStart )
+PartialSearchResults filterLines( const PatternMatcher& matcher, LogData::RawLines& rawLines,
+                                   LineNumber chunkStart )
 {
     LOG_DEBUG << "Filter lines at " << chunkStart;
     PartialSearchResults results;

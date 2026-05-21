@@ -42,14 +42,14 @@
 #include "log.h"
 #include "overload_visitor.h"
 #include "synchronization.h"
+#include "textencoding.h"
 
 void AttachOperation::doStart( LogDataWorker& workerThread ) const
 {
-    const auto defaultEncodingMib = Configuration::get().defaultEncodingMib();
-    LOG_INFO << "Attaching " << filename_ << ", encoding " << defaultEncodingMib;
+    const auto defaultEncodingName = Configuration::get().defaultEncodingName();
+    LOG_INFO << "Attaching " << filename_ << ", encoding " << defaultEncodingName.toStdString();
     workerThread.attachFile( filename_ );
-    workerThread.indexAll( defaultEncodingMib >= 0 ? QTextCodec::codecForMib( defaultEncodingMib )
-                                                   : nullptr );
+    workerThread.indexAll( defaultEncodingName );
 }
 
 void FullReindexOperation::doStart( LogDataWorker& workerThread ) const

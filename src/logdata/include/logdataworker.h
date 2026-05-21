@@ -46,7 +46,6 @@
 
 #include <QFile>
 #include <QObject>
-#include <QTextCodec>
 
 #if !defined( Q_MOC_RUN )
 #include <tbb/enumerable_thread_specific.h>
@@ -120,30 +119,30 @@ public:
     }
 
     // Get the guessed encoding for the content.
-    QTextCodec* getEncodingGuess() const
+    QByteArray getEncodingGuess() const
     {
         return data_->getEncodingGuess();
     }
-    void setEncodingGuess( QTextCodec* codec )
+    void setEncodingGuess( const QByteArray& encodingName )
     {
-        data_->setEncodingGuess( codec );
+        data_->setEncodingGuess( encodingName );
     }
 
-    QTextCodec* getForcedEncoding() const
+    QByteArray getForcedEncoding() const
     {
         return data_->getForcedEncoding();
     }
-    void forceEncoding( QTextCodec* codec )
+    void forceEncoding( const QByteArray& encodingName )
     {
-        return data_->forceEncoding( codec );
+        return data_->forceEncoding( encodingName );
     }
 
     // Atomically add to all the existing
     // indexing data.
     void addAll( const klogg::vector<char>& block, LineLength length,
-                 const FastLinePositionArray& linePosition, QTextCodec* encoding )
+                 const FastLinePositionArray& linePosition, const QByteArray& encodingName )
     {
-        data_->addAll( block, length, linePosition, encoding );
+        data_->addAll( block, length, linePosition, encodingName );
     }
 
     void setHeaderHash( quint64 digest, qint64 size )
@@ -208,16 +207,16 @@ private:
     klogg::vector<OffsetInFile> getEndOfLineOffsets( LineNumber line, LinesCount count ) const;
 
     // Get the guessed encoding for the content.
-    QTextCodec* getEncodingGuess() const;
-    void setEncodingGuess( QTextCodec* codec );
+    QByteArray getEncodingGuess() const;
+    void setEncodingGuess( const QByteArray& encodingName );
 
-    QTextCodec* getForcedEncoding() const;
-    void forceEncoding( QTextCodec* codec );
+    QByteArray getForcedEncoding() const;
+    void forceEncoding( const QByteArray& encodingName );
 
     // Atomically add to all the existing
     // indexing data.
     void addAll( const klogg::vector<char>& block, LineLength length,
-                 const FastLinePositionArray& linePosition, QTextCodec* encoding );
+                 const FastLinePositionArray& linePosition, const QByteArray& encodingName );
 
     // Completely clear the indexing data.
     void clear();
@@ -240,8 +239,8 @@ private:
     FileDigest hashBuilder_;
     IndexedHash hash_;
 
-    QTextCodec* encodingGuess_{};
-    QTextCodec* encodingForced_{};
+    QByteArray encodingGuess_;
+    QByteArray encodingForced_;
 
     bool useFastModificationDetection_ = true;
 
@@ -258,8 +257,8 @@ struct IndexingState {
     OffsetInFile::UnderlyingType end{};
     OffsetInFile::UnderlyingType file_size{};
 
-    QTextCodec* encodingGuess{};
-    QTextCodec* fileTextCodec{};
+    QByteArray encodingGuess;
+    QByteArray fileTextCodec;
 };
 
 using OperationResult = std::variant<bool, MonitoredFileStatus>;
@@ -312,15 +311,15 @@ class FullIndexOperation : public IndexOperation {
     Q_OBJECT
 public:
     FullIndexOperation( const QString& fileName, const std::shared_ptr<IndexingData>& indexingData,
-                        AtomicFlag& interruptRequest, QTextCodec* forcedEncoding = nullptr )
+                        AtomicFlag& interruptRequest, QByteArray forcedEncoding = {} )
         : IndexOperation( fileName, indexingData, interruptRequest )
-        , forcedEncoding_( forcedEncoding )
+        , forcedEncoding_( std::move( forcedEncoding ) )
     {
     }
     OperationResult run() override;
 
 private:
-    QTextCodec* forcedEncoding_;
+    QByteArray forcedEncoding_;
 };
 
 class PartialIndexOperation : public IndexOperation {
@@ -372,7 +371,7 @@ public:
     void attachFile( const QString& fileName );
     // Instructs the thread to start a new full indexing of the file, sending
     // signals as it progresses.
-    void indexAll( QTextCodec* forcedEncoding = nullptr );
+    void indexAll( QByteArray forcedEncoding = {} );
     // Instructs the thread to start a partial indexing (starting at
     // the end of the file as indexed).
     void indexAdditionalLines();

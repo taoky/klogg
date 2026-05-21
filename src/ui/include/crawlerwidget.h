@@ -99,7 +99,7 @@ class CrawlerWidget : public QSplitter,
     // is interacting with
     void selectAll();
 
-    std::optional<int> encodingMib() const;
+    QByteArray encodingName() const;
 
     // Get the text description of the encoding effectively used,
     // suitable to display to the user.
@@ -119,7 +119,7 @@ class CrawlerWidget : public QSplitter,
     // Reload the displayed file
     void reload();
     // Set the encoding
-    void setEncoding( std::optional<int> mib );
+    void setEncoding( QByteArray encodingName );
 
     void focusSearchEdit();
     void goToLine();
@@ -427,7 +427,7 @@ class CrawlerWidget : public QSplitter,
     klogg::vector<LineNumber> savedMarkedLines_;
 
     // Current encoding setting;
-    std::optional<int> encodingMib_;
+    QByteArray encodingName_;
     QString encodingText_;
 
     ColorLabelsManager colorLabelsManager_;

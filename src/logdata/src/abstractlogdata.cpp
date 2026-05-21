@@ -95,14 +95,14 @@ LineLength AbstractLogData::getLineLength( LineNumber line ) const
     return doGetLineLength( line );
 }
 
-void AbstractLogData::setDisplayEncoding( const char* encoding )
+void AbstractLogData::setDisplayEncoding( const QByteArray& encoding )
 {
     doSetDisplayEncoding( encoding );
 }
 
-QTextCodec* AbstractLogData::getDisplayEncoding() const
+QByteArray AbstractLogData::getDisplayEncodingName() const
 {
-    return doGetDisplayEncoding();
+    return doGetDisplayEncodingName();
 }
 
 void AbstractLogData::attachReader() const

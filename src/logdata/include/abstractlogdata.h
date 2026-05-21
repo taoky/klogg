@@ -40,9 +40,9 @@
 #define ABSTRACTLOGDATA_H
 
 #include <QObject>
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
-#include <QTextCodec>
 
 #include "linetypes.h"
 
@@ -72,13 +72,13 @@ class AbstractLogData : public QObject {
     LineLength getLineLength( LineNumber line ) const;
 
     // Set the view to use the passed encoding for display
-    void setDisplayEncoding( const char* encoding_name );
+    void setDisplayEncoding( const QByteArray& encoding_name );
     // Configure how the view shall interpret newline characters
     // this should be non zero for encodings where \n is encoded
     // in multiple bytes (e.g. UTF-16)
     void setMultibyteEncodingOffsets( int before_cr, int after_cr );
 
-    QTextCodec* getDisplayEncoding() const;
+    QByteArray getDisplayEncodingName() const;
 
     void attachReader() const;
     void detachReader() const;
@@ -111,8 +111,8 @@ class AbstractLogData : public QObject {
     // Internal function called to get the line length
     virtual LineLength doGetLineLength( LineNumber line ) const = 0;
     // Internal function called to set the encoding
-    virtual void doSetDisplayEncoding( const char* encoding ) = 0;
-    virtual QTextCodec* doGetDisplayEncoding() const = 0;
+    virtual void doSetDisplayEncoding( const QByteArray& encoding ) = 0;
+    virtual QByteArray doGetDisplayEncodingName() const = 0;
 
     virtual void doAttachReader() const = 0;
     virtual void doDetachReader() const = 0;

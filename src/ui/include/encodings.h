@@ -14,39 +14,39 @@
 #include <QApplication>
 #include <QMenu>
 #include <QString>
-#include <QTextCodec>
 
 #include <configuration.h>
 #include <mainwindowtext.h>
+#include <textencoding.h>
 
 class EncodingMenu {
   public:
-    static std::map<QString, std::vector<int>> supportedEncodings()
+    static std::map<QString, std::vector<QByteArray>> supportedEncodings()
     {
-        return std::map<QString, std::vector<int>>{
-            { "Unicode", { 106, 1013, 1014, 1018, 1019 } },
-            { "Arabic", { 82, 2256 } },
-            { "Baltic", { 7, 109, 2257 } },
-            { "Celtic", { 110 } },
-            { "Cyrillic", { 8, 2084, 2088, 2027, 2086, 2251 } },
-            { "Central European", { 2250 } },
-            { "Chinese", { 2026, 2025 } },
-            { "Eastern European", { 5 } },
-            { "Greek", { 10, 2253 } },
-            { "Hebrew", { 85, 2255 } },
-            { "Japanese", { 17, 18, 39 } },
-            { "Korean", { -949, 38 } },
-            { "Thai", { 2259 } },
-            { "Turkish", { 6, 12, 2254 } },
-            { "Western European", { 3, 4, 111, 2009, 2252 } },
-            { "Vietnamese", { 2258 } }
+        return std::map<QString, std::vector<QByteArray>>{
+            { "Unicode", { "UTF-8", "UTF-16BE", "UTF-16LE", "UTF-32BE", "UTF-32LE" } },
+            { "Arabic", { "ISO-8859-6", "windows-1256" } },
+            { "Baltic", { "ISO-8859-4", "ISO-8859-13", "windows-1257" } },
+            { "Celtic", { "ISO-8859-14" } },
+            { "Cyrillic", { "ISO-8859-5", "KOI8-R", "KOI8-U", "macintosh", "IBM866", "windows-1251" } },
+            { "Central European", { "windows-1250" } },
+            { "Chinese", { "Big5", "GBK" } },
+            { "Eastern European", { "ISO-8859-2" } },
+            { "Greek", { "ISO-8859-7", "windows-1253" } },
+            { "Hebrew", { "ISO-8859-8", "windows-1255" } },
+            { "Japanese", { "Shift_JIS", "EUC-JP", "ISO-2022-JP" } },
+            { "Korean", { "windows-949" } },
+            { "Thai", { "TIS-620" } },
+            { "Turkish", { "ISO-8859-3", "ISO-8859-9", "windows-1254" } },
+            { "Western European", { "US-ASCII", "ISO-8859-1", "ISO-8859-15", "IBM850", "windows-1252" } },
+            { "Vietnamese", { "windows-1258" } }
         };
     }
 
     static QMenu* generate( QActionGroup* actionGroup )
     {
         const auto supportedEncodings = EncodingMenu::supportedEncodings();
-        const auto defaultEncodingMib = Configuration::get().defaultEncodingMib();
+        const auto defaultEncodingName = Configuration::get().defaultEncodingName();
 
         using namespace klogg::mainwindow;
         QMenu* encodingsMenu = new QMenu(
@@ -58,42 +58,30 @@ class EncodingMenu {
             QApplication::translate( "klogg::mainwindow::action", action::autoEncodingStatusTip ) );
         autoEncoding->setCheckable( true );
         autoEncoding->setActionGroup( actionGroup );
-        autoEncoding->setChecked( defaultEncodingMib < 0 );
+        autoEncoding->setChecked( defaultEncodingName.isEmpty() );
 
         encodingsMenu->addSeparator();
 
-        QTextCodec* systemCodec = nullptr;
+        const auto systemEncodingName = textencoding::systemEncodingName();
 
-#ifdef Q_OS_WIN
-        auto systemCodePage = ::GetACP();
-        systemCodec
-            = QTextCodec::codecForName( QString( "CP%1" ).arg( systemCodePage ).toLatin1() );
-#endif
-        if ( systemCodec == nullptr ) {
-            systemCodec = QTextCodec::codecForLocale();
-        }
+        auto systemEncodingLabel
+            = QApplication::tr( "System (%1)" ).arg( QString::fromLatin1( systemEncodingName ) );
 
-        auto systemEncodingName
-            = QApplication::tr( "System (%1)" ).arg( systemCodec->name().constData() );
-
-        auto systemEncoding = encodingsMenu->addAction( systemEncodingName );
+        auto systemEncoding = encodingsMenu->addAction( systemEncodingLabel );
         systemEncoding->setCheckable( true );
         systemEncoding->setActionGroup( actionGroup );
-        systemEncoding->setData( systemCodec->mibEnum() );
+        systemEncoding->setData( systemEncodingName );
 
         encodingsMenu->addSeparator();
 
         for ( const auto& group : supportedEncodings ) {
             auto menu = encodingsMenu->addMenu( group.first );
-            for ( const auto mib : group.second ) {
-                auto codec = QTextCodec::codecForMib( mib );
-                if ( codec ) {
-                    auto action = menu->addAction( QString::fromLatin1( codec->name() ) );
-                    action->setActionGroup( actionGroup );
-                    action->setData( mib );
-                    action->setCheckable( true );
-                    action->setChecked( defaultEncodingMib == mib );
-                }
+            for ( const auto& encodingName : group.second ) {
+                auto action = menu->addAction( QString::fromLatin1( encodingName ) );
+                action->setActionGroup( actionGroup );
+                action->setData( encodingName );
+                action->setCheckable( true );
+                action->setChecked( defaultEncodingName == encodingName );
             }
         }
 

@@ -550,14 +550,14 @@ LineLength LogFilteredData::doGetLineLength( LineNumber lineNum ) const
     return sourceLogData_->getLineLength( line );
 }
 
-void LogFilteredData::doSetDisplayEncoding( const char* encoding )
+void LogFilteredData::doSetDisplayEncoding( const QByteArray& encoding )
 {
     LOG_DEBUG << "AbstractLogData::setDisplayEncoding: " << encoding;
 }
 
-QTextCodec* LogFilteredData::doGetDisplayEncoding() const
+QByteArray LogFilteredData::doGetDisplayEncodingName() const
 {
-    return sourceLogData_->getDisplayEncoding();
+    return sourceLogData_->getDisplayEncodingName();
 }
 
 void LogFilteredData::doAttachReader() const

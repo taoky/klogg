@@ -42,7 +42,6 @@
 #include <limits>
 #include <numeric>
 #include <qregularexpression.h>
-#include <qtextcodec.h>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -56,6 +55,7 @@
 #include "linetypes.h"
 #include "log.h"
 #include "logfiltereddata.h"
+#include "textencoding.h"
 
 #include "logdata.h"
 
@@ -63,7 +63,7 @@ LogData::LogData()
     : AbstractLogData()
     , indexing_data_( std::make_shared<IndexingData>() )
     , operationQueue_( [ this ] { attached_file_->attachReader(); } )
-    , codec_( QTextCodec::codecForName( "ISO-8859-1" ) )
+    , codec_( QByteArrayLiteral( "ISO-8859-1" ) )
 {
     // Initialise the file watcher
     connect( &FileWatcher::getFileWatcher(), &FileWatcher::fileChanged, this,
@@ -87,9 +87,9 @@ LogData::LogData()
         LOG_INFO << "Keep file closed option is set";
     }
 
-    const auto defaultEncodingMib = config.defaultEncodingMib();
-    if ( defaultEncodingMib >= 0 ) {
-        codec_.setCodec( QTextCodec::codecForMib( defaultEncodingMib ) );
+    const auto defaultEncodingName = config.defaultEncodingName();
+    if ( !defaultEncodingName.isEmpty() ) {
+        codec_.setEncodingName( defaultEncodingName );
     }
 }
 
@@ -142,7 +142,7 @@ std::unique_ptr<LogFilteredData> LogData::getNewFilteredData() const
     return std::make_unique<LogFilteredData>( this );
 }
 
-void LogData::reload( QTextCodec* forcedEncoding )
+void LogData::reload( QByteArray forcedEncoding )
 {
     operationQueue_.interrupt();
 
@@ -277,37 +277,37 @@ LineLength LogData::doGetLineLength( LineNumber line ) const
     return LineLength{ doGetExpandedLineString( line ).size() };
 }
 
-void LogData::doSetDisplayEncoding( const char* encoding )
+void LogData::doSetDisplayEncoding( const QByteArray& encoding )
 {
     LOG_DEBUG << "AbstractLogData::setDisplayEncoding: " << encoding;
-    codec_.setCodec( QTextCodec::codecForName( encoding ) );
+    codec_.setEncodingName( textencoding::canonicalName( QString::fromLatin1( encoding ) ) );
     auto needReload = false;
     auto useGuessedCodec = false;
 
     {
         IndexingData::ConstAccessor scopedAccessor{ indexing_data_.get() };
 
-        const QTextCodec* currentIndexCodec = scopedAccessor.getForcedEncoding();
-        if ( !currentIndexCodec ) {
+        auto currentIndexCodec = scopedAccessor.getForcedEncoding();
+        if ( currentIndexCodec.isEmpty() ) {
             currentIndexCodec = scopedAccessor.getEncodingGuess();
         }
 
-        if ( currentIndexCodec && codec_.mibEnum() != currentIndexCodec->mibEnum() ) {
+        if ( !currentIndexCodec.isEmpty() && codec_.encodingName() != currentIndexCodec ) {
             if ( codec_.encodingParameters() != EncodingParameters( currentIndexCodec ) ) {
                 needReload = true;
-                useGuessedCodec = codec_.mibEnum() == scopedAccessor.getEncodingGuess()->mibEnum();
+                useGuessedCodec = codec_.encodingName() == scopedAccessor.getEncodingGuess();
             }
         }
     }
 
     if ( needReload ) {
-        reload( useGuessedCodec ? nullptr : codec_.codec() );
+        reload( useGuessedCodec ? QByteArray{} : codec_.encodingName() );
     }
 }
 
-QTextCodec* LogData::doGetDisplayEncoding() const
+QByteArray LogData::doGetDisplayEncodingName() const
 {
-    return codec_.codec();
+    return codec_.encodingName();
 }
 
 QString LogData::doGetLineString( LineNumber line ) const
@@ -415,7 +415,7 @@ klogg::vector<QString> LogData::getLinesFromFile( LineNumber firstLine, LinesCou
 
     klogg::vector<QString> processedLines;
     try {
-        const auto rawLines = getLinesRaw( firstLine, number );
+        auto rawLines = getLinesRaw( firstLine, number );
         auto decodedLines = rawLines.decodeLines();
 
         processedLines.reserve( decodedLines.size() );
@@ -437,7 +437,7 @@ klogg::vector<QString> LogData::getLinesFromFile( LineNumber firstLine, LinesCou
     return processedLines;
 }
 
-QTextCodec* LogData::getDetectedEncoding() const
+QByteArray LogData::getDetectedEncodingName() const
 {
     return IndexingData::ConstAccessor{ indexing_data_.get() }.getEncodingGuess();
 }
@@ -452,7 +452,7 @@ void LogData::doDetachReader() const
     attached_file_->detachReader();
 }
 
-klogg::vector<QString> LogData::RawLines::decodeLines() const
+klogg::vector<QString> LogData::RawLines::decodeLines()
 {
     if ( this->endOfLines.empty() ) {
         return klogg::vector<QString>();
@@ -482,8 +482,8 @@ klogg::vector<QString> LogData::RawLines::decodeLines() const
                 break;
             }
 
-            auto decodedLine = textDecoder.decoder->toUnicode(
-                buffer.data() + lineStart, type_safe::narrow_cast<int>( length ) );
+            QString decodedLine = textDecoder.decoder.decode( QByteArrayView(
+                buffer.data() + lineStart, type_safe::narrow_cast<qsizetype>( length ) ) );
 
             if ( !prefilterPattern.pattern().isEmpty() ) {
                 decodedLine.remove( prefilterPattern );
@@ -506,10 +506,10 @@ klogg::vector<QString> LogData::RawLines::decodeLines() const
     return decodedLines;
 }
 
-klogg::vector<std::string_view> LogData::RawLines::buildUtf8View() const
+klogg::vector<std::string_view> LogData::RawLines::buildUtf8View()
 {
     klogg::vector<std::string_view> lines;
-    if ( this->endOfLines.empty() || textDecoder.decoder == nullptr ) {
+    if ( this->endOfLines.empty() || !textDecoder.decoder.isValid() ) {
         return lines;
     }
 
@@ -532,7 +532,8 @@ klogg::vector<std::string_view> LogData::RawLines::buildUtf8View() const
                                                   klogg::isize( buffer ) / 2 );
             }
             else {
-                utf16Data = textDecoder.decoder->toUnicode( buffer.data(), klogg::isize( buffer ) );
+                utf16Data = textDecoder.decoder.decode(
+                    QByteArrayView( buffer.data(), klogg::isize( buffer ) ) );
             }
 
             if ( !prefilterPattern.pattern().isEmpty() ) {

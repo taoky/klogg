@@ -94,6 +94,7 @@
 #include "quickfindpattern.h"
 #include "regularexpressionpattern.h"
 #include "shortcuts.h"
+#include "textencoding.h"
 
 #ifdef Q_OS_WIN
 
@@ -1455,9 +1456,9 @@ void AbstractLogView::saveLinesToFile( LineNumber begin, LineNumber end )
     }
     offsets.emplace_back( lineOffset, LinesCount( ( end - lineOffset ).get() % chunkSize.get() ) );
 
-    const QTextCodec* codec = logData_->getDisplayEncoding();
-    if ( !codec ) {
-        codec = QTextCodec::codecForName( "utf-8" );
+    auto encodingName = logData_->getDisplayEncodingName();
+    if ( encodingName.isEmpty() ) {
+        encodingName = QByteArrayLiteral( "UTF-8" );
     }
 
     AtomicFlag interruptRequest;
@@ -1500,7 +1501,7 @@ void AbstractLogView::saveLinesToFile( LineNumber begin, LineNumber end )
 
     auto lineWriter = tbb::flow::function_node<LinesData, tbb::flow::continue_msg>(
         saveFileGraph, 1,
-        [ &interruptRequest, &codec, &saveFile,
+        [ &interruptRequest, &encodingName, &saveFile,
           &progressDialog ]( const LinesData& lines ) mutable {
             if ( !lines.second ) {
                 if ( !interruptRequest ) {
@@ -1513,7 +1514,7 @@ void AbstractLogView::saveLinesToFile( LineNumber begin, LineNumber end )
 
             for ( const auto& l : lines.first ) {
 
-                const auto encodedLine = codec->fromUnicode( l );
+                const auto encodedLine = textencoding::encode( encodingName, l );
                 const auto written = saveFile.write( encodedLine );
 
                 if ( written != encodedLine.size() ) {
