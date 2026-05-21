@@ -17,8 +17,8 @@ target_link_libraries(
          klogg_version
          klogg_utils
          tbb
-         Qt${QT_VERSION_MAJOR}::Gui
-         Qt${QT_VERSION_MAJOR}::Widgets
+         Qt6::Gui
+         Qt6::Widgets
 )
 
 if(KLOGG_USE_SENTRY)

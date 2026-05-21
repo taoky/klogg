@@ -115,8 +115,8 @@ target_link_libraries(
          klogg_logdata
          klogg_versioncheck
          klogg_karchive
-         Qt${QT_VERSION_MAJOR}::Widgets
-         Qt${QT_VERSION_MAJOR}::Xml
+         Qt6::Widgets
+         Qt6::Xml
 )
 
 if(WIN32)

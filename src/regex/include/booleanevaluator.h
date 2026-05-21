@@ -17,6 +17,8 @@
  * along with klogg.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cinttypes>
+#include <cstdint>
 #include <exprtk.hpp>
 #include <string_view>
 

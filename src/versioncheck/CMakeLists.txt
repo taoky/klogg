@@ -12,5 +12,5 @@ target_link_libraries(
          project_warnings
          klogg_settings
          klogg_utils
-         Qt${QT_VERSION_MAJOR}::Network
+         Qt6::Network
 )

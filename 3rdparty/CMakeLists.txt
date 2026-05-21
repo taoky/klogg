@@ -107,30 +107,12 @@ else()
   target_include_directories(klogg_uchardet_wrapper INTERFACE ${UCHARDET_INCLUDE_DIR})
 endif()
 
-if(${QT_VERSION_MAJOR} EQUAL 6) 
-set(CPM_USE_LOCAL_PACKAGES OFF)
-endif()
+find_package(KF6Archive REQUIRED)
+add_library(klogg_karchive INTERFACE)
+target_link_libraries(klogg_karchive INTERFACE KF6::Archive)
 
-cpmaddpackage(
-  NAME
-  KF5Archive
-  GITHUB_REPOSITORY
-  variar/klogg_karchive
-  GIT_TAG
-  f546bf6ae66a8d34b43da5a41afcfbf4e1a47906
-  EXCLUDE_FROM_ALL
-  YES
-)
-if(NOT KF5Archive_ADDED)
-  find_package(KF5Archive)
-  add_library(klogg_karchive INTERFACE)
-  target_link_libraries(klogg_karchive INTERFACE KF5::Archive)
-endif()
-
-if(${QT_VERSION_MAJOR} EQUAL 6)
 message("Resetting CPM_USE_LOCAL_PACKAGES to ${_TMP_CPM_USE_LOCAL_PACKAGES}")
 set(CPM_USE_LOCAL_PACKAGES ${_TMP_CPM_USE_LOCAL_PACKAGES})
-endif()
 
 cpmaddpackage(
   NAME
@@ -138,7 +120,7 @@ cpmaddpackage(
   GITHUB_REPOSITORY
   martinus/robin-hood-hashing
   GIT_TAG
-  3.11.2
+  3.11.5
   EXCLUDE_FROM_ALL
   YES
 )
@@ -184,7 +166,7 @@ if(KDSingleApplication_ADDED)
   )
 
   target_include_directories(kdsingleapp PUBLIC ${KDSingleApplication_SOURCE_DIR}/src)
-  target_link_libraries(kdsingleapp Qt${QT_VERSION_MAJOR}::Core)
+  target_link_libraries(kdsingleapp Qt6::Core)
   target_compile_definitions(kdsingleapp PUBLIC KDSINGLEAPPLICATION_STATIC_BUILD)
 
   set_target_properties(kdsingleapp PROPERTIES AUTOMOC ON)
@@ -266,7 +248,7 @@ if(KDToolBox_ADDED)
   )
 
   target_include_directories(kdtoolbox PUBLIC ${KDToolBox_SOURCE_DIR}/qt/KDSignalThrottler/src)
-  target_link_libraries(kdtoolbox Qt${QT_VERSION_MAJOR}::Core)
+  target_link_libraries(kdtoolbox Qt6::Core)
   set_target_properties(kdtoolbox PROPERTIES AUTOMOC ON)
 endif()
 
@@ -414,5 +396,3 @@ foreach(target ${klogg_cpm_targets})
     set_property(TARGET ${target} PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ${${target}_include_dirs})
   endif()
 endforeach()
-
-

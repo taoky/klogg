@@ -180,20 +180,9 @@ if(APPLE)
 endif()
 
 find_package(
-  QT
-  NAMES
   Qt6
-  Qt5
   COMPONENTS Core
-             Widgets
-             Concurrent
-             Network
-             Xml
-  REQUIRED
-)
-find_package(
-  Qt${QT_VERSION_MAJOR}
-  COMPONENTS Core
+             Core5Compat
              Widgets
              Concurrent
              Network
@@ -201,7 +190,7 @@ find_package(
   REQUIRED
 )
 
-set(KLOGG_QT_VERSION ${Qt${QT_VERSION_MAJOR}Core_VERSION})
+set(KLOGG_QT_VERSION ${Qt6Core_VERSION})
 
 message("Qt version ${KLOGG_QT_VERSION}")
 message("LTO ${KLOGG_USE_LTO}")
