@@ -180,7 +180,7 @@ if(APPLE)
 endif()
 
 find_package(
-  Qt6
+  Qt6 6.8
   COMPONENTS Core
              Widgets
              Concurrent
@@ -188,6 +188,13 @@ find_package(
              Xml
   REQUIRED
 )
+
+# QStringConverter needs Qt's ICU backend for the legacy encodings in the UI.
+# Installing ICU separately does not add this capability to an existing Qt build.
+get_target_property(KLOGG_QT_CORE_FEATURES Qt6::Core QT_ENABLED_PRIVATE_FEATURES)
+if(NOT "icu" IN_LIST KLOGG_QT_CORE_FEATURES)
+  message(FATAL_ERROR "klogg requires Qt built with ICU support for legacy text encodings")
+endif()
 
 set(KLOGG_QT_VERSION ${Qt6Core_VERSION})
 

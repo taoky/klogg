@@ -37,6 +37,9 @@ build_root_clang/
 build_root_gcc/
 build_root_qt5/
 build_root_qt6/
+.flatpak-builder/
+.flatpak-build/
+.flatpak-repo/
 test_data/
 
 compile_commands.json

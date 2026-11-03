@@ -1,0 +1,195 @@
+# Build the current checkout against the latest stable KDE Qt 6 runtime.
+app-id: dev.filimonov.klogg
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: klogg
+rename-desktop-file: klogg.desktop
+rename-icon: klogg
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+# Files are opened through the file chooser portal, as in the reference package.
+cleanup:
+  - /include
+  - /lib/*.a
+  - /lib/cmake
+  - /lib/pkgconfig
+modules:
+  - name: ragel
+    buildsystem: autotools
+    cleanup: ['*']
+    sources:
+      - type: archive
+        url: https://www.colm.net/files/ragel/ragel-6.10.tar.gz
+        sha256: 5f156edb65d20b856d638dd9ee2dfb43285914d9aa2b6ec779dac0270cd56c3f
+
+  - name: boost-headers
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/include
+      - cp -a boost /app/include/
+    cleanup: ['*']
+    sources:
+      - type: archive
+        url: https://archives.boost.io/release/1.86.0/source/boost_1_86_0.tar.bz2
+        sha256: 1bed88e40401b2cb7a1f76d4bab499e352fa4d0c5f31c0dbae64e24d34d7513b
+
+  - name: klogg
+    # The project's compiler flags and Vectorscan build currently target x86.
+    only-arches: [x86_64]
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - -DKLOGG_GENERIC_CPU=ON
+      - -DKLOGG_BUILD_TESTS=OFF
+      - -DKLOGG_USE_SENTRY=OFF
+      - -DKLOGG_USE_VECTORSCAN=ON
+      - -DENABLE_ROARING_TESTS=OFF
+      - -DFETCHCONTENT_FULLY_DISCONNECTED=ON
+      - -DCPM_SOURCE_CACHE=/run/build/klogg/flatpak-deps-cache
+      # Match the versions in 3rdparty/CMakeLists.txt. Flatpak downloads these
+      # before entering the build sandbox; CPM must not fetch at configure time.
+      - -DFETCHCONTENT_SOURCE_DIR_SIMDUTF=/run/build/klogg/flatpak-deps/simdutf
+      - -DFETCHCONTENT_SOURCE_DIR_TYPE_SAFE=/run/build/klogg/flatpak-deps/type_safe
+      - -DFETCHCONTENT_SOURCE_DIR_CROARING=/run/build/klogg/flatpak-deps/croaring
+      - -DFETCHCONTENT_SOURCE_DIR_STREAMVBYTE=/run/build/klogg/flatpak-deps/streamvbyte
+      - -DFETCHCONTENT_SOURCE_DIR_MADDY=/run/build/klogg/flatpak-deps/maddy
+      - -DFETCHCONTENT_SOURCE_DIR_VECTORSCAN=/run/build/klogg/flatpak-deps/vectorscan
+      - -DFETCHCONTENT_SOURCE_DIR_UCHARDET=/run/build/klogg/flatpak-deps/uchardet
+      - -DFETCHCONTENT_SOURCE_DIR_ROBIN_HOOD=/run/build/klogg/flatpak-deps/robin_hood
+      - -DFETCHCONTENT_SOURCE_DIR_KDSINGLEAPPLICATION=/run/build/klogg/flatpak-deps/kdsingleapplication
+      - -DFETCHCONTENT_SOURCE_DIR_XXHASH=/run/build/klogg/flatpak-deps/xxhash
+      - -DFETCHCONTENT_SOURCE_DIR_WHEREAMI=/run/build/klogg/flatpak-deps/whereami
+      - -DFETCHCONTENT_SOURCE_DIR_EXPRTK=/run/build/klogg/flatpak-deps/exprtk
+      - -DFETCHCONTENT_SOURCE_DIR_KDTOOLBOX=/run/build/klogg/flatpak-deps/kdtoolbox
+      - -DFETCHCONTENT_SOURCE_DIR_EFSW=/run/build/klogg/flatpak-deps/efsw
+      - -DFETCHCONTENT_SOURCE_DIR_TBB=/run/build/klogg/flatpak-deps/tbb
+      - -DFETCHCONTENT_SOURCE_DIR_MIMALLOC=/run/build/klogg/flatpak-deps/mimalloc
+    make-args: [klogg]
+    post-install:
+      - install -Dm644 /run/build/klogg/packaging/flatpak/dev.filimonov.klogg.metainfo.xml /app/share/metainfo/dev.filimonov.klogg.metainfo.xml
+    sources:
+      # Copy only build inputs, not local build trees or workspace settings.
+      - type: dir
+        path: src
+        dest: src
+      - type: dir
+        path: cmake
+        dest: cmake
+      - type: dir
+        path: 3rdparty
+        dest: 3rdparty
+      - type: dir
+        path: packaging
+        dest: packaging
+      - type: dir
+        path: website
+        dest: website
+      - type: file
+        path: CMakeLists.txt
+      - type: file
+        path: COPYING
+      - type: file
+        path: NOTICE
+      - type: file
+        path: README.md
+      - type: file
+        path: DOCUMENTATION.md
+      - type: file
+        path: .clang-format
+      - type: file
+        path: .clang-tidy
+      - type: file
+        path: .cmake-format
+      # CRoaring's bootstrap verifies this file even when tests are disabled.
+      - type: file
+        url: https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.38.6/CPM.cmake
+        sha256: 11c3fa5f1ba14f15d31c2fb63dbc8628ee133d81c8d764caad9a8db9e0bacb07
+        dest: flatpak-deps-cache/cpm
+        dest-filename: CPM_0.38.6.cmake
+      - type: git
+        url: https://github.com/simdutf/simdutf.git
+        commit: 58c12ff5d84665e26e80547e5f0d72b29ba1c5d4
+        disable-submodules: true
+        dest: flatpak-deps/simdutf
+      - type: git
+        url: https://github.com/foonathan/type_safe.git
+        commit: 1dbea7936a1e389caa692d01bb3f5ba4b6da7d82
+        disable-submodules: true
+        dest: flatpak-deps/type_safe
+      - type: git
+        url: https://github.com/RoaringBitmap/CRoaring.git
+        commit: 3ef7b44a4f74af09fe19bb84d30bc35cab130561
+        disable-submodules: true
+        dest: flatpak-deps/croaring
+      - type: git
+        url: https://github.com/lemire/streamvbyte.git
+        commit: c43294a81501e0fdf14adc83818d47f7f9bc1bb6
+        disable-submodules: true
+        dest: flatpak-deps/streamvbyte
+      - type: git
+        url: https://github.com/variar/maddy.git
+        commit: 602e26613e624535e2de883b3f2c98a16729d1d4
+        disable-submodules: true
+        dest: flatpak-deps/maddy
+      - type: git
+        url: https://github.com/VectorCamp/vectorscan.git
+        commit: d29730e1cb9daaa66bda63426cdce83505d2c809
+        disable-submodules: true
+        dest: flatpak-deps/vectorscan
+      - type: git
+        url: https://gitlab.freedesktop.org/uchardet/uchardet
+        commit: ae6302a016088ad07177f86d417b20010053632b
+        disable-submodules: true
+        dest: flatpak-deps/uchardet
+      - type: git
+        url: https://github.com/martinus/robin-hood-hashing.git
+        commit: 9145f963d80d6a02f0f96a47758050a89184a3ed
+        disable-submodules: true
+        dest: flatpak-deps/robin_hood
+      - type: git
+        url: https://github.com/variar/KDSingleApplication.git
+        commit: 5b30db30266f92bc01f1439777803ce8dbf16c79
+        disable-submodules: true
+        dest: flatpak-deps/kdsingleapplication
+      - type: git
+        url: https://github.com/Cyan4973/xxHash.git
+        commit: 35b0373c697b5f160d3db26b1cbb45a0d5ba788c
+        disable-submodules: true
+        dest: flatpak-deps/xxhash
+      - type: git
+        url: https://github.com/gpakosz/whereami.git
+        commit: dcb52a058dc14530ba9ae05e4339bd3ddfae0e0e
+        disable-submodules: true
+        dest: flatpak-deps/whereami
+      - type: git
+        url: https://github.com/variar/klogg_exprtk.git
+        commit: 1f9f4cd7d2620b7b24232de9ea22908d63913459
+        disable-submodules: true
+        dest: flatpak-deps/exprtk
+      - type: git
+        url: https://github.com/KDAB/KDToolBox.git
+        commit: 6468867d1a46eabe1bcb2cd342f338fe66f06675
+        disable-submodules: true
+        dest: flatpak-deps/kdtoolbox
+      - type: git
+        url: https://github.com/SpartanJ/efsw.git
+        commit: 62f785c56b7a34f035193d4cb831921347b586b8
+        disable-submodules: true
+        dest: flatpak-deps/efsw
+      - type: git
+        url: https://github.com/variar/oneTBB.git
+        commit: c9be1ac2930f02dea523003ed801b4489f3e6b6e
+        disable-submodules: true
+        dest: flatpak-deps/tbb
+      - type: git
+        url: https://github.com/microsoft/mimalloc.git
+        commit: 8c532c32c3c96e5ba1f2283e032f69ead8add00f
+        disable-submodules: true
+        dest: flatpak-deps/mimalloc

@@ -20,7 +20,7 @@ To build Klogg:
 
 - cmake 3.12 or later to generate build files
 - C++ compiler with decent C++17 support (at least gcc 7.5, clang 7, msvc 19.14)
-- Qt libraries 5.9 or later (CI builds use Qt 5.9.5/5.12.5/5.15.2):
+- Qt libraries 6.8 or later, built with ICU support for legacy text encodings:
   - QtCore
   - QtGui
   - QtWidgets
@@ -28,6 +28,8 @@ To build Klogg:
   - QtNetwork
   - QtXml
   - QtTools
+
+- KDE Frameworks 6 KArchive development files (KF6Archive)
 
 To build Hyperscan regular expressions backend (default):
 
@@ -64,12 +66,17 @@ Memory allocator override can be turned off by passing `-DKLOGG_OVERRIDE_MALLOC`
 
 ### Building on Linux
 
-Here is how to build klogg on Ubuntu 18.04.
+Linux CI builds Debian 13 (trixie) packages. Older distribution and AppImage jobs,
+as well as macOS and Windows jobs, are currently disabled.
+
+Here is how to build klogg on Debian 13.
 
 Install dependencies:
 
 ```
-sudo apt-get install build-essential cmake qtbase5-dev libboost-all-dev ragel
+sudo apt-get install build-essential cmake ninja-build qt6-base-dev qt6-tools-dev \
+    qt6-tools-dev-tools qt6-translations-l10n libkf6archive-dev libicu-dev \
+    libboost-dev ragel git pkg-config ca-certificates
 ```
 
 Configure and build klogg:
@@ -82,15 +89,37 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 cmake --build .
 ```
 
-**_If cmake gives error about missing "Qt5LinguistTools" configuration files, try running:_**
+**_If cmake gives error about missing "Qt6LinguistTools" configuration files, try running:_**
 
 ```bash
-sudo apt-get install qttools5-dev
+sudo apt-get install qt6-tools-dev
 ```
 
 Binaries are placed into `build_root/output`.
 
 See `.github/workflows/ci-build.yml` for more information on build process.
+
+### Building a Flatpak on Linux
+
+`dev.filimonov.klogg.yaml` builds the current checkout for x86_64 using the
+KDE 6.11 runtime and SDK (Qt 6). Install `flatpak` and `flatpak-builder` and
+configure the Flathub remote, then run from the repository root:
+
+```sh
+flatpak-builder --user --install-deps-from=flathub --sandbox \
+    --repo=.flatpak-repo .flatpak-build dev.filimonov.klogg.yaml
+flatpak-builder --run .flatpak-build dev.filimonov.klogg.yaml klogg
+```
+
+For a subsequent build, add `--force-clean` to replace `.flatpak-build`.
+The first command builds and exports to a local repository; it does not install
+the application. The manifest downloads pinned dependencies before building
+without network access. Keep its dependency commits in sync with
+`3rdparty/CMakeLists.txt` when updating libraries.
+
+The package supports Wayland with X11 fallback and uses the file chooser portal
+to open logs, without granting access to the entire host filesystem. Crash
+reporting is disabled in this build.
 
 ### Building on Windows
 

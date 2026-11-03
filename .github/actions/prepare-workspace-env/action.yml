@@ -1,5 +1,5 @@
 name: "Set common env vars"
-description: ""
+description: "Set workspace paths and CMake options for the build"
 runs:
   using: "composite"
   steps:

@@ -1,5 +1,5 @@
 name: "Prepare klogg version env var"
-description: ""
+description: "Set the build version from the workflow run number"
 runs:
   using: "composite"
   steps:

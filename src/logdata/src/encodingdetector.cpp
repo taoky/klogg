@@ -111,11 +111,13 @@ QByteArray EncodingDetector::detectEncoding( const klogg::vector<char>& block ) 
     if ( const auto detectedUnicodeEncoding = QStringConverter::encodingForData( blockArray ) ) {
         encodingGuess = QByteArray( QStringConverter::nameForEncoding( *detectedUnicodeEncoding ) );
     }
+    else if ( !uchardetEncoding.isEmpty() ) {
+        // Escape-based encodings such as ISO-2022-JP are also valid UTF-8 byte
+        // sequences. Preserve the detector's result unless a BOM overrides it.
+        encodingGuess = uchardetEncoding;
+    }
     else if ( simdutf::validate_utf8( block.data(), block.size() ) ) {
         encodingGuess = QByteArrayLiteral( "UTF-8" );
-    }
-    else {
-        encodingGuess = uchardetEncoding;
     }
 
     if ( encodingGuess.isEmpty() ) {

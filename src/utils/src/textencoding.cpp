@@ -67,7 +67,10 @@ QByteArray canonicalName( QAnyStringView name )
         return {};
     }
 
-    return QByteArray( decoder.name() );
+    // ICU can accept an alias without supplying a canonical name (e.g. TIS-620).
+    // An empty result would turn a valid encoding into Auto/UTF-8 at call sites.
+    const QByteArray canonicalName( decoder.name() );
+    return canonicalName.isEmpty() ? name.toString().toLatin1() : canonicalName;
 }
 
 QByteArray canonicalNameForMib( int mib )

@@ -42,6 +42,8 @@
 #include <QToolButton>
 #include <QtGui>
 
+#include <set>
+
 #include "encodings.h"
 #include "fontutils.h"
 #include "highlighteredit.h"
