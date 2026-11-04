@@ -9,7 +9,6 @@ on:
       - CODE_OF_CONDUCT.md
       - CONTRIBUTING.md
       - README.md
-      - latest.json
       - .gitignore
   pull_request:
     branches: [ master ]
@@ -19,20 +18,20 @@ on:
       - CODE_OF_CONDUCT.md
       - CONTRIBUTING.md
       - README.md
-      - latest.json
       - .gitignore
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   SaveVersion:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: "github.ref_type == 'tag' || !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/klogg-version
 
       - name: Save version
-        run: echo $KLOGG_VERSION > klogg_version.txt
+        run: echo "$KLOGG_VERSION" > klogg_version.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -41,7 +40,7 @@ jobs:
           if-no-files-found: error
 
   Linux:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: "github.ref_type == 'tag' || !contains(github.event.head_commit.message, '[skip ci]')"
     strategy:
       fail-fast: false
       matrix:

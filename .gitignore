@@ -63,3 +63,10 @@ cmake-build-relwithdebinfo/
 #website
 website/hugo
 website/resources/
+
+# Generated release metadata and Flatpak export
+/dev.filimonov.klogg.release.yaml
+/release/
+/flatpak-repo/
+/flatpak-build/
+/packages-flatpak/

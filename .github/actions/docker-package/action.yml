@@ -3,6 +3,11 @@ description: "Creates a package from build output"
 runs:
   using: "composite"
   steps:
+    - name: Extract Linux debug symbols
+      shell: sh
+      run: |
+        docker run --env KLOGG_BUILD_ROOT=$KLOGG_BUILD_ROOT -v "$KLOGG_WORKSPACE":/usr/local ${{ matrix.config.container }} /bin/bash -c 'cd "/usr/local/$KLOGG_BUILD_ROOT" && objcopy --only-keep-debug --compress-debug-sections=zlib ./output/klogg ./output/klogg.debug && objcopy --add-gnu-debuglink=./output/klogg.debug ./output/klogg'
+
     - name: package
       if: ${{ matrix.config.cpack_gen }}
       shell: sh

@@ -1,3 +1,9 @@
+> This is [taoky's fork](https://github.com/taoky/klogg) of klogg, with Qt 6
+> support and Linux releases. Download fork builds from
+> [this repository's Releases](https://github.com/taoky/klogg/releases).
+> The fork currently publishes Debian 13 x86_64 packages and Flatpak bundles;
+> project information and links below are retained from upstream.
+
 ![media_small](https://user-images.githubusercontent.com/1620716/119145300-2d98b800-ba52-11eb-8d87-abe72cf65dd1.png)
 
 [![GitHub license](https://img.shields.io/github/license/variar/klogg.svg?style=flat)](https://github.com/variar/klogg/blob/master/COPYING)

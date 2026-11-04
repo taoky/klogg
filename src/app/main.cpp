@@ -62,6 +62,7 @@
 
 #include "cli.h"
 #include "kloggapp.h"
+#include "klogg_version.h"
 
 #ifdef KLOGG_PORTABLE
 const bool PersistentInfo::ForcePortable = true;
@@ -123,7 +124,10 @@ int main( int argc, char* argv[] )
     setApplicationAttributes( config.enableQtHighDpi(), config.scaleFactorRounding() );
 
     KloggApp app( argc, argv );
-
+    app.setApplicationVersion( kloggVersion() );
+#ifdef Q_OS_LINUX
+    app.setDesktopFileName( qEnvironmentVariable( "FLATPAK_ID", "klogg" ) );
+#endif
 
     MainWindow::installLanguage( config.language() );
     CliParameters parameters( app );

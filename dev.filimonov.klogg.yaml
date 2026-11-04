@@ -92,6 +92,8 @@ modules:
         path: website
         dest: website
       - type: file
+        path: VERSION
+      - type: file
         path: CMakeLists.txt
       - type: file
         path: COPYING

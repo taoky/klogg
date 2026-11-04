@@ -4,16 +4,16 @@
     <license file="COPYING"/>
     <welcome file="description.txt"/>
     
-    <pkg-ref id="com.github.variar.klogg"/>
+    <pkg-ref id="dev.filimonov.klogg"/>
     <options customize="never" require-scripts="false"/>
     <choices-outline>
         <line choice="default">
-            <line choice="com.github.variar.klogg"/>
+            <line choice="dev.filimonov.klogg"/>
         </line>
     </choices-outline>
     <choice id="default"/>
-    <choice id="com.github.variar.klogg" visible="false">
-        <pkg-ref id="com.github.variar.klogg"/>
+    <choice id="dev.filimonov.klogg" visible="false">
+        <pkg-ref id="dev.filimonov.klogg"/>
     </choice>
-    <pkg-ref id="com.github.variar.klogg" version="%klogg_version%" onConclusion="none">%klogg_pkg%</pkg-ref>
+    <pkg-ref id="dev.filimonov.klogg" version="%klogg_version%" onConclusion="none">%klogg_pkg%</pkg-ref>
 </installer-gui-script>

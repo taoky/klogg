@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" KLOGG_BASE_VERSION LIMIT_COUNT 1)
+
 project(
   klogg
-  VERSION 24.11.0
+  VERSION ${KLOGG_BASE_VERSION}
   DESCRIPTION "klogg log viewer"
   LANGUAGES C CXX ASM
 )
@@ -12,7 +14,7 @@ set(PROJECT_HOMEPAGE_URL "https://github.com/variar/klogg")
 string(TIMESTAMP PRODUCT_CURRENT_YEAR "%Y")
 set(COMPANY "Anton Filimonov")
 set(COPYRIGHT "Copyright (c) ${PRODUCT_CURRENT_YEAR} Nicolas Bonnefon, Anton Filimonov and other contributors.")
-set(IDENTIFIER "com.github.variar.klogg")
+set(IDENTIFIER "dev.filimonov.klogg")
 set(PROJECT_DESCRIPTION "${PROJECT_NAME} log viewer")
 
 option(KLOGG_BUILD_TESTS "Build tests" ON)
