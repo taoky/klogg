@@ -244,7 +244,7 @@ void CrawlerWidget::doSendAllStateSignals()
 
 void CrawlerWidget::changeEvent( QEvent* event )
 {
-    if ( event->type() == QEvent::StyleChange ) {
+    if ( event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange ) {
         dispatchToMainThread( [ this ] {
             loadIcons();
             searchInfoLineDefaultPalette_ = this->palette();

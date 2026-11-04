@@ -25,6 +25,7 @@
 
 struct StyleManager {
 
+    static constexpr QLatin1String SystemStyleKey = QLatin1String( "System", 6 );
     static constexpr QLatin1String DarkStyleKey = QLatin1String( "Dark", 4 );
     static constexpr QLatin1String DarkWindowsStyleKey = QLatin1String( "Windows Dark", 12 );
     static constexpr QLatin1String VistaKey = QLatin1String( "WindowsVista", 12 );

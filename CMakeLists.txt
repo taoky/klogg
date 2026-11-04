@@ -189,6 +189,10 @@ find_package(
   REQUIRED
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
+endif()
+
 # QStringConverter needs Qt's ICU backend for the legacy encodings in the UI.
 # Installing ICU separately does not add this capability to an existing Qt build.
 get_target_property(KLOGG_QT_CORE_FEATURES Qt6::Core QT_ENABLED_PRIVATE_FEATURES)

@@ -20,6 +20,16 @@
 #include <QApplication>
 #include <QPalette>
 #include <QStyleFactory>
+#include <QStyleHints>
+#include <QPointer>
+#ifdef Q_OS_LINUX
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
+#include <QDBusVariant>
+#endif
 #include <qcolor.h>
 
 #include "configuration.h"
@@ -44,7 +54,7 @@ QStringList StyleManager::availableStyles()
 
     styles.erase( removedStyles, styles.end() );
 
-    styles << DarkStyleKey;
+    styles << SystemStyleKey << DarkStyleKey;
 
 #ifndef Q_OS_MACOS
     styles << DarkWindowsStyleKey;
@@ -64,15 +74,15 @@ QString StyleManager::defaultPlatformStyle()
 #elif defined( Q_OS_MACOS )
     return MacintoshKey;
 #else
-    return FusionKey;
+    return SystemStyleKey;
 #endif
 }
 
-void StyleManager::applyStyle( const QString& style )
+static void renderStyle( const QString& style )
 {
     LOG_INFO << "Setting style to " << style;
 
-    if ( style == DarkStyleKey || style == DarkWindowsStyleKey ) {
+    if ( style == StyleManager::DarkStyleKey || style == StyleManager::DarkWindowsStyleKey ) {
         const auto palette = Configuration::get().darkPalette();
 
         QPalette darkPalette;
@@ -101,17 +111,129 @@ void StyleManager::applyStyle( const QString& style )
         darkPalette.setColor( QPalette::Disabled, QPalette::Light,
                               QColor( palette.at( "DisabledLight" ) ) );
 
-        if ( style == DarkWindowsStyleKey ) {
-            qApp->setStyle( QStyleFactory::create( WindowsKey ) );
+        if ( style == StyleManager::DarkWindowsStyleKey ) {
+            qApp->setStyle( QStyleFactory::create( StyleManager::WindowsKey ) );
         }
         else {
-            qApp->setStyle( QStyleFactory::create( FusionKey ) );
+            qApp->setStyle( QStyleFactory::create( StyleManager::FusionKey ) );
         }
 
         qApp->setPalette( darkPalette );
     }
     else {
+        // Clear explicit dark colors so Qt can resolve the current platform palette.
+        qApp->setPalette( QPalette() );
         qApp->setStyle( style );
         qApp->setStyleSheet( "" );
     }
 }
+
+
+// Keep the desktop preference separate from the user's explicit style choice.
+class SystemStyleWatcher : public QObject {
+    Q_OBJECT
+  public:
+    explicit SystemStyleWatcher( QObject* parent ) : QObject( parent )
+    {
+        connect( qApp->styleHints(), &QStyleHints::colorSchemeChanged, this,
+                 [ this ] { refresh(); }, Qt::QueuedConnection );
+#ifdef Q_OS_LINUX
+        auto bus = QDBusConnection::sessionBus();
+        bus.connect( "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                     "org.freedesktop.portal.Settings", "SettingChanged", this,
+                     SLOT( settingChanged( QString, QString, QDBusVariant ) ) );
+        auto* service = new QDBusServiceWatcher( "org.freedesktop.portal.Desktop", bus,
+                                                QDBusServiceWatcher::WatchForOwnerChange, this );
+        connect( service, &QDBusServiceWatcher::serviceOwnerChanged, this,
+                 [ this ] {
+                     ++revision_;
+                     portalPreference_ = -1;
+                     refresh();
+                     readPreference();
+                 } );
+        readPreference();
+#endif
+    }
+
+    void apply( const QString& style )
+    {
+        style_ = style;
+        render();
+    }
+
+  private:
+    void refresh()
+    {
+        if ( style_ == StyleManager::SystemStyleKey )
+            render();
+    }
+
+    void render()
+    {
+        auto style = style_;
+        if ( style == StyleManager::SystemStyleKey ) {
+            bool dark = qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+#ifdef Q_OS_LINUX
+            // 0 means no preference; 1 dark; 2 light. Do not cast to Qt's enum:
+            // Qt assigns different numeric values to Light and Dark.
+            if ( portalPreference_ >= 0 )
+                dark = portalPreference_ == 1;
+#endif
+            style = dark ? StyleManager::DarkStyleKey : StyleManager::FusionKey;
+        }
+        renderStyle( style );
+    }
+
+#ifdef Q_OS_LINUX
+    void readPreference()
+    {
+        auto message = QDBusMessage::createMethodCall(
+            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Settings", "Read" );
+        message << "org.freedesktop.appearance" << "color-scheme";
+        auto* call = new QDBusPendingCallWatcher(
+            QDBusConnection::sessionBus().asyncCall( message ), this );
+        const auto revision = revision_;
+        connect( call, &QDBusPendingCallWatcher::finished, this, [ this, revision, call ] {
+            const QDBusPendingReply<QDBusVariant> reply = *call;
+            if ( !reply.isError() && revision == revision_ )
+                updatePreference( reply.value() );
+            call->deleteLater();
+        } );
+    }
+
+    void updatePreference( const QDBusVariant& value )
+    {
+        bool ok = false;
+        const auto preference = value.variant().toUInt( &ok );
+        if ( !ok || preference > 2 )
+            return;
+        portalPreference_ = static_cast<int>( preference );
+        refresh();
+    }
+
+  private Q_SLOTS:
+    void settingChanged( const QString& group, const QString& key, const QDBusVariant& value )
+    {
+        if ( group == "org.freedesktop.appearance" && key == "color-scheme" ) {
+            ++revision_;
+            updatePreference( value );
+        }
+    }
+
+  private:
+    int portalPreference_ = -1;
+    unsigned revision_ = 0;
+#endif
+    QString style_;
+};
+
+void StyleManager::applyStyle( const QString& style )
+{
+    static QPointer<SystemStyleWatcher> watcher;
+    if ( !watcher )
+        watcher = new SystemStyleWatcher( qApp );
+    watcher->apply( style );
+}
+
+#include "styles.moc"

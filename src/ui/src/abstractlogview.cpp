@@ -460,6 +460,11 @@ void AbstractLogView::changeEvent( QEvent* changeEvent )
 {
     QAbstractScrollArea::changeEvent( changeEvent );
 
+    if ( changeEvent->type() == QEvent::PaletteChange
+         || changeEvent->type() == QEvent::StyleChange ) {
+        textAreaCache_.invalid_ = true;
+    }
+
     // Stop the timer if the widget becomes inactive
     if ( changeEvent->type() == QEvent::ActivationChange ) {
         if ( !isActiveWindow() )

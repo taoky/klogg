@@ -12,6 +12,7 @@ add_library(
 )
 
 target_include_directories(klogg_settings PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set_target_properties(klogg_settings PROPERTIES AUTOMOC ON)
 target_link_libraries(
   klogg_settings
   PUBLIC project_options
@@ -20,6 +21,10 @@ target_link_libraries(
          Qt6::Core
          Qt6::Gui
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(klogg_settings PRIVATE Qt6::DBus)
+endif()
 
 if(KLOGG_USE_LTO)
   set_property(TARGET klogg_settings PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

@@ -544,7 +544,7 @@ void OptionsDialog::updateConfigFromDialog()
 
     config.setVerifySslPeers( verifySslCheckBox->isChecked() );
 
-    restartAppMessage = config.style() != styleComboBox->currentText();
+    const bool styleChanged = config.style() != styleComboBox->currentText();
 
     config.setStyle( styleComboBox->currentText() );
     config.setHideAnsiColorSequences( hideAnsiColorsCheckBox->isChecked() );
@@ -584,6 +584,10 @@ void OptionsDialog::updateConfigFromDialog()
     auto& recentFiles = RecentFiles::get();
     recentFiles.setFilesHistoryMaxItems( filesHistoryMaxItemsSpinBox->value() );
     recentFiles.save();
+
+    if ( styleChanged ) {
+        StyleManager::applyStyle( config.style() );
+    }
 
     if ( restartAppMessage ) {
         QMessageBox::warning(

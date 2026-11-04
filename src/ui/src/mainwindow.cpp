@@ -1574,7 +1574,7 @@ void MainWindow::changeEvent( QEvent* event )
             }
         }
     }
-    else if ( event->type() == QEvent::StyleChange ) {
+    else if ( event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange ) {
         dispatchToMainThread( [ this ] {
             loadIcons();
             updateOpenedFilesMenu();
