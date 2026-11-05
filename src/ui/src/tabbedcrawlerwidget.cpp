@@ -51,7 +51,7 @@ TabbedCrawlerWidget::TabbedCrawlerWidget()
     , newfiltered_icon_( ":/images/newfiltered_icon.png" )
 {
 
-    QString tabStyle = "QTabBar::tab { height: 24px; }";
+    QString tabStyle = "QTabBar::tab { min-height: 24px; }";
     QString tabCloseButtonStyle = " QTabBar::close-button {\
               height: 12px; width: 12px;\
               subcontrol-origin: padding;\
